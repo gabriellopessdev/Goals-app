@@ -2,7 +2,7 @@ import { Modal, Text } from "react-native";
 import { View } from 'react-native';
 import { TouchableOpacity } from 'react-native';
 import Input from "./Input";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface modalProps {
     visible: boolean;
@@ -10,10 +10,16 @@ interface modalProps {
     onSave: (goal: string) => void;
     title?: string;
     placeholderInput?: string;
+    inputValue: string;
+    onInputChange: (text: string) => void;
 }
 
-export function CustomModal({ visible, onClose, onSave, title, placeholderInput }: modalProps) {
-    const [goal, setGoal] = useState('');
+export function CustomModal({ visible, onClose, onSave, title, placeholderInput, inputValue, onInputChange }: modalProps) {
+    const [goal, setGoal] = useState(inputValue);
+
+    useEffect(() => {
+        setGoal(inputValue);
+    }, [inputValue]);
 
     const handleSave = () => {
         if (goal.trim()) {
@@ -46,7 +52,10 @@ export function CustomModal({ visible, onClose, onSave, title, placeholderInput 
                     <Input
                         placeholder={placeholderInput}
                         value={goal}
-                        onChangeText={setGoal}
+                        onChangeText={(text) => {
+                            setGoal(text);
+                            onInputChange(text);
+                        }}
                     />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <TouchableOpacity
