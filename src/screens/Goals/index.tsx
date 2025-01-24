@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View, ScrollView, Alert } from "react-native";
 import { createGoals, getDb, initializeDatabase, removeGoals, updateGoals } from "../../database/initializeDatabase";
 import { CustomModal } from '../../components/Modal';
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../routes/types";
 
 
 type Goals = {
@@ -16,6 +19,8 @@ export default function GoalsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [editTitle, setEditTitle] = useState<string>('');
     const [editGoalId, setEditGoalId] = useState<number | null>(null);
+
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Goals'>>();
 
     useEffect(() => {
         const loadData = async () => {
@@ -92,6 +97,10 @@ export default function GoalsScreen() {
         setModalVisible(true);
     };
 
+    const handleViewSubGoals = (goalId: number, goalTitle: string) => {
+        navigation.navigate("SubGoals", { goalId, goalTitle }); // Passa o id e o título da meta
+    };
+
     return (
         <View style={{ flex: 1 }}>
             <StatusBar style="auto" />
@@ -138,6 +147,9 @@ export default function GoalsScreen() {
                             </Text>
                             <TouchableOpacity onPress={() => handleDeleteGoal(item.id)}><Text>Apagar</Text></TouchableOpacity>
                             <TouchableOpacity onPress={() => handleEditGoal(item.id, item.title)}><Text>Editar</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleViewSubGoals(item.id, item.title)}>
+                                <Text>Ver Submetas</Text>
+                            </TouchableOpacity>
                         </View>
                     )
                 })}

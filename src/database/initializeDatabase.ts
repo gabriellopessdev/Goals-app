@@ -11,12 +11,12 @@ export async function initializeDatabase() {
 
   // Criação da tabela 'submetas'
   await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS subgoals (
+    CREATE TABLE IF NOT EXISTS subGoals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      goalstitle INTEGER NOT NULL,
+      goalsId INTEGER NOT NULL,
       title TEXT NOT NULL,
       completed INTEGER DEFAULT 0,
-      FOREIGN KEY (goalstitle) REFERENCES goals (title) ON DELETE CASCADE
+      FOREIGN KEY (goalsId) REFERENCES goals (id) ON DELETE CASCADE
     )
   `);
 }
@@ -40,10 +40,14 @@ export async function updateGoals(id:number, title: string) {
   await db.getAllAsync('SELECT * FROM goals');
   } */
 
-  export async function createSubgoals(title: string) {
-  await db.runAsync('INSERT INTO goals (title) VALUES (?)', [title]);
+export async function createSubGoals(title: string, goalsId: number) {
+  await db.runAsync('INSERT INTO subGoals (title, goalsId) VALUES (?, ?)', [title, goalsId]);
 }
 
-export async function removesubgoals(id: number) {
-  await db.runAsync('DELETE FROM goals WHERE id = ?', [id]);
+export async function removeSubGoals(id: number) {
+  await db.runAsync('DELETE FROM subGoals WHERE id = ?', [id]);
+}
+
+export async function updateSubGoals(id:number, title: string) {  
+  await db.runAsync('UPDATE subGoals SET title = ? WHERE id = ?', [title, id])
 }
