@@ -3,20 +3,23 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../../routes/types';
 import { CustomModal } from '../../components/Modal';
 import { useEffect, useState } from 'react';
-import { createSubGoals, getDb, initializeDatabase, removeSubGoals, updateSubGoals } from '../../database/initializeDatabase';
+import { createSubGoals, getDb, initializeDatabase, removeSubGoals, updateChackSubGoals, updateSubGoals } from '../../database/initializeDatabase';
 import { ScrollView } from 'react-native';
+import { Checkbox } from 'react-native-paper';
 
 type SubGoalsScreenRouteProp = RouteProp<RootStackParamList, 'SubGoals'>;
-type SubGoals = {
+export type SubGoals = {
     title: string;
     goalsId: number;
     id: number;
+    completed: boolean;
 }
 
 export default function SubGoalsScreen() {
     const route = useRoute<SubGoalsScreenRouteProp>();
     const { goalId, goalTitle } = route.params;
     const [subGoalsList, setSubGoalsList] = useState<SubGoals[]>([]);
+
     const [modalVisible, setModalVisible] = useState(false);
     const [editTitle, setEditTitle] = useState<string>('');
     const [editSubGoalId, setEditSubGoalId] = useState<number | null>(null);
@@ -43,13 +46,14 @@ export default function SubGoalsScreen() {
     const handleSaveSubGoal = async (title: string) => {
 
         try {
-            await createSubGoals(title, goalId);
+            const newId = await createSubGoals(title, goalId);
             setSubGoalsList((prev) => [
                 ...prev,
                 {
-                    id: Date.now(), // Temporário até carregar do banco
+                    id: newId,
                     title,
-                    goalsId: goalId
+                    goalsId: goalId,
+                    completed: false,
                 },
             ]);
         } catch (error) {
@@ -88,15 +92,27 @@ export default function SubGoalsScreen() {
         setModalVisible(true);
     };
 
+    const handleCheckBoxChange = async (id: number, completed: boolean) => {
+        try {
+            await updateChackSubGoals(id, completed ? 0 : 1);
+            setSubGoalsList((prev) =>
+                prev.map((subGoal) =>
+                    subGoal.id === id ? { ...subGoal, completed: !completed } : subGoal
+                )
+            );
+        } catch (error) {
+            console.error('Erro ao atualizar o status da submeta:', error);
+        }
+    };
 
     return (
         <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 20, paddingTop: '20%', color: 'gray' }}>{goalTitle}</Text>
             <ScrollView showsVerticalScrollIndicator={false} >
-                {subGoalsList.map((item, index) => {
+                {subGoalsList.map((subGoal) => {
                     return (
                         <View
-                            key={index}
+                            key={subGoal.id}
                             style={{
                                 width: '95%',
                                 margin: 10,
@@ -107,9 +123,16 @@ export default function SubGoalsScreen() {
                                 backgroundColor: '#f9f9f9',
                             }}
                         >
-                            <Text style={{ fontSize: 16, marginBottom: 8, justifyContent: 'center' }}>{item.title}</Text>
-                            <TouchableOpacity onPress={() => handleDeleteSubGoal(item.id)}><Text>Apagar</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleEditSuboal(item.id, item.title)}><Text>Editar</Text></TouchableOpacity>
+                            <Checkbox
+                                status={subGoal.completed ? 'checked' : 'unchecked'}
+                                onPress={() => handleCheckBoxChange(subGoal.id, subGoal.completed)}
+                                color="#007BFF"
+                                uncheckedColor="gray"
+
+                            />
+                            <Text style={{ fontSize: 16, marginBottom: 8, justifyContent: 'center' }}>{subGoal.title}</Text>
+                            <TouchableOpacity onPress={() => handleDeleteSubGoal(subGoal.id)}><Text>Apagar</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleEditSuboal(subGoal.id, subGoal.title)}><Text>Editar</Text></TouchableOpacity>
                         </View>
                     )
                 })}

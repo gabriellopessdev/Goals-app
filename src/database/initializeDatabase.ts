@@ -25,7 +25,8 @@ export function getDb() {
 }
 
 export async function createGoals(title: string) {
-  await db.runAsync('INSERT INTO goals (title) VALUES (?)', [title]);
+  const result = await db.runAsync('INSERT INTO goals (title) VALUES (?)', [title]);
+  return result.insertId;
 }
 
 export async function removeGoals(id: number) {
@@ -41,7 +42,8 @@ export async function updateGoals(id:number, title: string) {
   } */
 
 export async function createSubGoals(title: string, goalsId: number) {
-  await db.runAsync('INSERT INTO subGoals (title, goalsId) VALUES (?, ?)', [title, goalsId]);
+  const result = await db.runAsync('INSERT INTO subGoals (title, goalsId) VALUES (?, ?)', [title, goalsId]);
+  return result.insertId;
 }
 
 export async function removeSubGoals(id: number) {
@@ -50,4 +52,9 @@ export async function removeSubGoals(id: number) {
 
 export async function updateSubGoals(id:number, title: string) {  
   await db.runAsync('UPDATE subGoals SET title = ? WHERE id = ?', [title, id])
+}
+export async function updateChackSubGoals(id:number, completed: number) {  
+  console.log(id, completed);
+  
+  await db.runAsync('UPDATE subGoals SET completed = ? WHERE id = ?', [completed, id]);
 }

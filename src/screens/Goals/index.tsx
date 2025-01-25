@@ -1,14 +1,15 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View, ScrollView, Alert } from "react-native";
 import { createGoals, getDb, initializeDatabase, removeGoals, updateGoals } from "../../database/initializeDatabase";
 import { CustomModal } from '../../components/Modal';
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../routes/types";
+import { SubGoals } from "../Subgoals";
 
 
-type Goals = {
+export type Goals = {
     title: string;
     progress: number;
     id: number
@@ -22,28 +23,54 @@ export default function GoalsScreen() {
 
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Goals'>>();
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                await initializeDatabase();
+    useFocusEffect(
+        React.useCallback(() => {
+            const loadData = async () => {
+                try {
+                    await initializeDatabase();
 
-                const db = getDb();
+                    const db = getDb();
 
-                const allGoals = await db.getAllAsync('SELECT * FROM goals');
-                const formattedGoals = allGoals.map((goal: Goals) => ({
-                    id: goal.id,
-                    title: goal.title,
+                    const allGoals = await db.getAllAsync('SELECT * FROM goals');
 
-                    progress: Math.random() * 100, // Simulando progresso entre 0 e 100 mudar depois para as submetas
-                }));
-                setGoalsList(formattedGoals);
-            } catch (error) {
-                console.error("Erro ao abrir o banco de dados:", error);
-            }
-        };
+                    const allSubGoals = await db.getAllAsync('SELECT * FROM subgoals');
 
-        loadData();
-    }, []);
+                    // Calcular o progresso para cada meta
+                    const formattedGoals = allGoals.map((goal: Goals) => {
+                        // Filtrar submetas associadas à meta atual
+                        const relatedSubGoals = allSubGoals.filter(
+                            (subGoal: SubGoals) => subGoal.goalsId === goal.id
+                        );
+
+                        // Total de submetas
+                        const totalSubGoals = relatedSubGoals.length;
+
+                        // Submetas concluídas
+                        const completedSubGoals = relatedSubGoals.filter(
+                            (subGoal: SubGoals) => subGoal.completed
+                        ).length;
+
+                        // Calcular progresso (evitar divisão por zero)
+                        const progress =
+                            totalSubGoals > 0
+                                ? (completedSubGoals / totalSubGoals) * 100
+                                : 0;
+
+                        return {
+                            id: goal.id,
+                            title: goal.title,
+                            progress, // Progresso calculado
+                        };
+                    });
+                    setGoalsList(formattedGoals);
+                } catch (error) {
+                    console.error("Erro ao abrir o banco de dados:", error);
+                }
+            };
+
+            loadData();
+        }, [])
+    );
 
     const handleSaveGoal = async (title: string) => {
         if (!title.trim()) {
@@ -52,11 +79,11 @@ export default function GoalsScreen() {
         }
 
         try {
-            await createGoals(title);
+            const newId = await createGoals(title);
             setGoalsList((prev) => [
                 ...prev,
                 {
-                    id: Date.now(), // Temporário até carregar do banco
+                    id: newId,
                     title,
                     progress: 0,
                 },
@@ -109,48 +136,47 @@ export default function GoalsScreen() {
             </Text>
 
             <ScrollView showsVerticalScrollIndicator={false} >
-                {goalsList.map((item, index) => {
+                {goalsList.map((goal) => {
                     return (
-                        <View
-                            key={index}
-                            style={{
-                                width: '95%',
-                                margin: 10,
-                                padding: 5,
-                                borderWidth: 1,
-                                borderColor: '#ccc',
-                                borderRadius: 8,
-                                backgroundColor: '#f9f9f9',
-                            }}
-                        >
-                            <Text style={{ fontSize: 16, textAlign: 'center', marginBottom: 8 }}>{item.title}</Text>
-                            {/* Barra de progresso */}
+                        <TouchableOpacity onPress={() => handleViewSubGoals(goal.id, goal.title)}>
                             <View
+                                key={goal.id}
                                 style={{
-                                    width: '100%',
-                                    height: 8,
-                                    backgroundColor: '#e0e0e0',
-                                    borderRadius: 4,
-                                    overflow: 'hidden',
+                                    width: '95%',
+                                    margin: 10,
+                                    padding: 5,
+                                    borderWidth: 1,
+                                    borderColor: '#ccc',
+                                    borderRadius: 8,
+                                    backgroundColor: '#f9f9f9',
                                 }}
                             >
+                                <Text style={{ fontSize: 16, textAlign: 'center', marginBottom: 8 }}>{goal.title}</Text>
+                                {/* Barra de progresso */}
                                 <View
                                     style={{
-                                        width: `${item.progress}%`,
-                                        height: '100%',
-                                        backgroundColor: '#007BFF',
+                                        width: '100%',
+                                        height: 8,
+                                        backgroundColor: '#e0e0e0',
+                                        borderRadius: 4,
+                                        overflow: 'hidden',
                                     }}
-                                />
+                                >
+                                    <View
+                                        style={{
+                                            width: `${goal.progress}%`,
+                                            height: '100%',
+                                            backgroundColor: '#007BFF',
+                                        }}
+                                    />
+                                </View>
+                                <Text style={{ fontSize: 12, textAlign: 'center', marginTop: 5, color: 'gray' }}>
+                                    {Math.round(goal.progress)}% concluído
+                                </Text>
+                                <TouchableOpacity onPress={() => handleDeleteGoal(goal.id)}><Text>Apagar</Text></TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleEditGoal(goal.id, goal.title)}><Text>Editar</Text></TouchableOpacity>
                             </View>
-                            <Text style={{ fontSize: 12, textAlign: 'center', marginTop: 5, color: 'gray' }}>
-                                {Math.round(item.progress)}% concluído
-                            </Text>
-                            <TouchableOpacity onPress={() => handleDeleteGoal(item.id)}><Text>Apagar</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleEditGoal(item.id, item.title)}><Text>Editar</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleViewSubGoals(item.id, item.title)}>
-                                <Text>Ver Submetas</Text>
-                            </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
                     )
                 })}
             </ScrollView>
